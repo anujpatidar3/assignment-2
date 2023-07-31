@@ -1,22 +1,8 @@
-const fs = require('fs')
-const path = require('path')
-
 const filesSystem = {
     root: {
-        files: ['file1.txt', 'file2.txt'],
-        directories: ['dir1', 'dir2'],
-    },
-    dir1: {
-        files: ['file3.txt'],
+        files: [],
         directories: [],
-    },
-    dir2: {
-        files: ['file4.txt'],
-        directories: ['subDir1'],
-    },
-    subDir1: {
-        files: ['file5.txt'],
-        directories: [],
+        name: 'root'
     },
 }
 
@@ -24,37 +10,38 @@ let currentDirectory = filesSystem.root
 
 function getParentDirectory(directory) {
     if (directory === filesSystem.root) {
-        return {}
+        return filesSystem.root
     }
-    return Object.values(filesSystem).find((dir) =>
-        dir.directories.includes(directory)
-    ) || filesSystem.root
-}
+    for (const dir in filesSystem) {
+        if (filesSystem[dir].directories.includes(directory.name)) {
+            return filesSystem[dir];
+        }
+    }
 
+    return filesSystem.root;
+}
 
 function getPath(directory) {
     if (directory === filesSystem.root) {
-      return './'
+        return './'
     }
-  
     const parts = []
     let currentDir = directory
-  
+
     while (currentDir !== filesSystem.root) {
-      const parentDir = getParentDirectory(currentDir)
-  
-      if (!parentDir) {
-        console.log('Error: Parent directory not found!')
-        return ''
-      }
-  
-      parts.unshift(currentDir)
-      currentDir = parentDir
+        const parentDir = getParentDirectory(currentDir)
+
+        if (!parentDir) {
+            console.log('Error: Parent directory not found!')
+            return ''
+        }
+
+        parts.unshift(currentDir.name)
+        currentDir = parentDir
     }
-  
+
     return './' + parts.join('/')
-  }
-  
+}
 
 function getCurrentPath() {
     return getPath(currentDirectory)
@@ -67,9 +54,10 @@ function printCurrentDirectory() {
 function makeDirectory(directoryName) {
     if (!currentDirectory.directories.includes(directoryName)) {
         currentDirectory.directories.push(directoryName)
-        currentDirectory[directoryName] = {
+        filesSystem[directoryName] = {
             files: [],
             directories: [],
+            name: directoryName
         }
         console.log(`Directory Created: ${directoryName}`)
     } else {
@@ -78,6 +66,7 @@ function makeDirectory(directoryName) {
 }
 
 function changeDirectory(directoryName) {
+
     if (directoryName === '..') {
         if (currentDirectory !== filesSystem.root) {
             currentDirectory = getParentDirectory(currentDirectory)
@@ -86,7 +75,7 @@ function changeDirectory(directoryName) {
             console.log('Already at the root directory.')
         }
     } else if (currentDirectory.directories.includes(directoryName)) {
-        currentDirectory = filesSystem[directoryName]  
+        currentDirectory = filesSystem[directoryName]
         console.log('Directory changed')
     } else {
         console.log('Directory not found')
@@ -95,38 +84,26 @@ function changeDirectory(directoryName) {
 
 
 function moveDirectory(sourceDirectory, destinationDirectory) {
-    if (currentDirectory?.directories?.includes(sourceDirectory)) {
-        if (currentDirectory?.directories?.includes(destinationDirectory)) {
-            let destinationDirectoryObject =
-                currentDirectory[destinationDirectory]
-            
-            if (!destinationDirectoryObject) {
-                currentDirectory.directories.push(destinationDirectory)
-                currentDirectory[destinationDirectory] = {
-                    files: [],
-                    directories: [],
-                }
-                destinationDirectoryObject = currentDirectory[destinationDirectory] 
-            }
+    const doesDirectoryExists = currentDirectory.directories.includes(sourceDirectory)
+    const destinationDirectoryObject = filesSystem[destinationDirectory];
 
-            const sourceDirectoryObject = currentDirectory[sourceDirectory]
-
-            destinationDirectoryObject.directories.push(sourceDirectory)
-            destinationDirectoryObject.files.push(...sourceDirectoryObject.files)
-
-            currentDirectory.directories.splice(
-                currentDirectory.directories.indexOf(sourceDirectory),
-                1
-            )
-
-            delete currentDirectory[sourceDirectory]
-
-            console.log(`Directory moved successfully`)
-        } else {
-            console.log(`Destination Directory not found`)
-        }
+    if (doesDirectoryExists && currentDirectory && destinationDirectoryObject) {
+        destinationDirectoryObject.directories.push(sourceDirectory)
+        currentDirectory.directories = currentDirectory.directories.filter((dir) => dir !== sourceDirectory);
     } else {
-        console.log(`Source Directory not found`)
+        console.log(`Error: Source or Destination Directory not found`);
+    }
+}
+
+function moveFile(sourceFile, destinationDirectory) {
+    const doesFileExists = currentDirectory.files.includes(sourceFile)
+    const destinationDirectoryObject = filesSystem[destinationDirectory];
+
+    if (doesFileExists && currentDirectory && destinationDirectoryObject) {
+        destinationDirectoryObject.files.push(sourceFile)
+        currentDirectory.files = currentDirectory.files.filter((dir) => dir !== sourceFile);
+    } else {
+        console.log(`Error: Source or Destination File not found`);
     }
 }
 
@@ -141,17 +118,23 @@ function simulationFileSystem() {
     listFilesAndDirectories()
 
     changeDirectory('newDirectory')
+    makeDirectory('newDirectorySecondLevel')
+    changeDirectory('newDirectorySecondLevel')
+    makeDirectory('newDirectoryThirdLevel')
     printCurrentDirectory()
     listFilesAndDirectories()
 
     changeDirectory('..')
+    makeDirectory('dir1')
 
+    changeDirectory('..')
+    changeDirectory('..')
+    printCurrentDirectory()
     moveDirectory('newDirectory', 'dir1')
-    printCurrentDirectory()
-
-    changeDirectory('dir1')
-    printCurrentDirectory()
     listFilesAndDirectories()
+
+    console.log(filesSystem)
+
 }
 
 simulationFileSystem()
